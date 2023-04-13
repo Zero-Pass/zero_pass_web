@@ -892,6 +892,8 @@ dependencies = [
 name = "zero_pass_web"
 version = "0.1.0"
 dependencies = [
+ "wasm-bindgen",
+ "web-sys",
  "yew",
  "zero_pass_backend",
 ]

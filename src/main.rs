@@ -1,5 +1,7 @@
 use zero_pass_backend::{ Methods, encrypt };
 use yew::prelude::*;
+use wasm_bindgen::JsCast;
+use web_sys::{EventTarget, HtmlInputElement, HtmlSelectElement};
 
 fn method_options() -> Vec<Html> {
     let method_vec = Methods::get_methods();
@@ -14,7 +16,52 @@ fn method_options() -> Vec<Html> {
 #[function_component(App)]
 fn app() -> Html {
 
-    let pass = "something";
+    let password_result = use_state(String::default);
+    let password_result_value = (*password_result).clone();
+
+    let unique_value_state = use_state(|| String::from("u"));
+    let unique_value = (*unique_value_state).clone();
+    let unique_input_handle = Callback::from(move |e: Event| {
+        let target: EventTarget = e.target().expect("Event should have a target when dispatched");
+        let unique_value_state = unique_value_state.clone();
+        unique_value_state.set(target.unchecked_into::<HtmlInputElement>().value());
+    }); 
+
+    let variable_value_state = use_state(|| String::from("v"));
+    let variable_value = (*variable_value_state).clone();
+    let variable_input_handle = Callback::from(move |e: Event| {
+        let target: EventTarget = e.target().expect("Event should have a target when dispatched");
+        let variable_value_state = variable_value_state.clone();
+        variable_value_state.set(target.unchecked_into::<HtmlInputElement>().value());
+    });
+
+    let method_value_state = use_state(|| String::from("Base64"));
+    let method_value = (*method_value_state).clone();
+    let method_select_handle = Callback::from(move |e: Event| {
+        let target = e.target().expect("Event should have a target when dispatched");
+        let method_value_state = method_value_state.clone();
+        method_value_state.set(target.unchecked_into::<HtmlSelectElement>().value());
+    });
+
+    let repeat_value_state = use_state(|| 0u8);
+    let repeat_value = (*repeat_value_state).clone();
+    let repeat_increment_handle = Callback::from(move |e: Event| {
+        let target: EventTarget = e.target().expect("Event should have a target when dispatched");
+        let repeat_value_state = repeat_value_state.clone();
+        let value = target.unchecked_into::<HtmlInputElement>().value().parse::<u8>().unwrap();
+        repeat_value_state.set(value);
+    });
+
+    let onclick = move |_| {
+        let method = Methods::get_method(method_value.clone()).unwrap();
+        let pass = encrypt::PasswordBuilder::new()
+            .unique(unique_value.clone())
+            .variable(variable_value.clone())
+            .method_ptr(method).expect("Error")
+            .repeat(repeat_value)
+            .build();
+        password_result.set(pass);
+    };
 
     html!{
         <>
@@ -29,22 +76,22 @@ fn app() -> Html {
                     <div class="card text-bg-dark p-3 rounded-4 shadow">
                         <div class="card-body p-2">
                             <label class="form-label" for="UniquePassword" >{"Unique pass"}</label>
-                            <input type="text" class="form-control form-control-lg mb-3 text-bg-dark border-primary-subtle" id="UniquePassword" placeholder="unique" />
+                            <input onchange={unique_input_handle} type="text" class="form-control form-control-lg mb-3 text-bg-dark border-primary-subtle" id="UniquePassword" placeholder="unique" />
                             <label for="VariablePassword" >{"Variable pass"}</label>
-                            <input type="text" class="form-control form-control-lg mb-3 text-bg-dark border-primary-subtle" id="VariablePassword" placeholder="variable" />
+                            <input onchange={variable_input_handle} type="text" class="form-control form-control-lg mb-3 text-bg-dark border-primary-subtle" id="VariablePassword" placeholder="variable" />
                             <label for="EncryptionMethod" >{"Method"}</label>
                             <div class="row mb-3">
                                 <div class="col">
-                                    <select class="form-select form-select-lg text-bg-dark border-primary-subtle" id="EncryptionMethod" >
+                                    <select onchange={method_select_handle} class="form-select form-select-lg text-bg-dark border-primary-subtle" id="EncryptionMethod" >
                                         {method_options()}
                                     </select>
                                 </div>
                                 <div class="col-3">
-                                    <input class="form-control text-bg-dark border-secondary-subtle" type="number" value="0" />
+                                    <input onchange={repeat_increment_handle} class="form-control text-bg-dark border-secondary-subtle" type="number" value="0" />
                                 </div>
                             </div>
-                            <p class="text-center"><b>{pass}</b></p>
-                            <button type="button" class="btn btn-primary w-100">{"Generate password"}</button>
+                            <p class="text-center"><b>{ password_result_value }</b></p>
+                            <button {onclick} type="button" class="btn btn-primary w-100">{"Generate password"}</button>
                         </div>
                     </div>
                 </div>
